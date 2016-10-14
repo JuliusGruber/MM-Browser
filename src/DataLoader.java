@@ -21,6 +21,9 @@ public class DataLoader extends MaxObject {
 	MaxBox polyFilePathSend;
 	MaxBox sendViewManager;
 	
+	
+	
+	
 	public DataLoader (){
 		declareOutlets(new int[]{ DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL});
 		MaxPatcher p = this.getParentPatcher();
