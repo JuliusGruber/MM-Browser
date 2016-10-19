@@ -95,6 +95,8 @@ public class ViewsManagement2 extends MaxObject {
 			view.setSelected(false);
 			view.setSampleList(new ArrayList<Sample>());
 			view.getViewPanel().send("bgfillcolor", new Atom []{Atom.newAtom(1), Atom.newAtom (1),Atom.newAtom(1), Atom.newAtom (1)});
+			String viewName = "view"+view.getViewID();
+			view.getTitleMessageBox().send("set",new Atom []{Atom.newAtom(viewName)});
 		}
 	}
 	
@@ -138,7 +140,9 @@ public class ViewsManagement2 extends MaxObject {
 			viewsList.get(i).getJsui().send("list", filePathArray);
 		}
 		
-		MaxBox sonoAreaSend = parentPatcher.getNamedBox("sonoAreaSend");
+		//MaxBox sonoAreaSend = parentPatcher.getNamedBox("sonoAreaSend");
+		
+//		send the unselect info to the sonoArea
 		sonoAreaSend.send("list", filePathArray);
 		
 		
