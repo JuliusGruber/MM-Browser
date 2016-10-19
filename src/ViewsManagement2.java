@@ -87,6 +87,8 @@ public class ViewsManagement2 extends MaxObject {
 		
 	}
 	
+	
+	
 	public void resetAllViews(){
 		System.out.println("resetAllViews() method was called");
 		for (View2 view : viewsList){
