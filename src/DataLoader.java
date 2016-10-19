@@ -164,7 +164,7 @@ public class DataLoader extends MaxObject {
 	
 	protected Collection<File> getWAVCollection(String dirName) {
 		File dir = new File(dirName);
-		String[] extensions = new String[] { "wav" };
+		String[] extensions = new String[] {"wav" , "WAV" };
 		Collection<File> files =   FileUtils.listFiles(dir, extensions, true);
 		System.out.println("There are "+files.size()+" samples in this folder");
 		return files;
