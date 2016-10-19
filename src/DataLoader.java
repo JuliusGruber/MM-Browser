@@ -25,7 +25,7 @@ public class DataLoader extends MaxObject {
 	
 	
 	public DataLoader (){
-		declareOutlets(new int[]{ DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL});
+		declareOutlets(new int[]{ DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL ,DataTypes.ALL});
 		MaxPatcher p = this.getParentPatcher();
 //		MaxBox audioPbatcher = p.getNamedBox("audioBpatcherViews");
 //		MaxPatcher audioPatcher  = audioPbatcher.getSubPatcher();
@@ -41,7 +41,7 @@ public class DataLoader extends MaxObject {
 	public void loadFolderData(String dirName){
 		resetViews();
 		resetSonoArea();
-		//resetBasket();
+		resetBasket();
 		
 		Collection <File> filePathColl = getWAVCollection(dirName);
 		
@@ -159,7 +159,7 @@ public class DataLoader extends MaxObject {
 	}
 	
 	private void resetBasket(){
-//		sendRemoveAll.send("removeAllSamples", null);
+		outlet(5,"removeAllSamples");
 	}
 	
 	protected Collection<File> getWAVCollection(String dirName) {
