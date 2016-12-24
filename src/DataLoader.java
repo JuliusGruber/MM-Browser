@@ -74,7 +74,15 @@ public class DataLoader extends MaxObject {
 			}
 			outlet(0,"setViewData", atomArray);
 		}
-}
+//		select the fist view
+		Atom [] atomArrayViewID = new Atom[1];
+		atomArrayViewID[0] = Atom.newAtom(0);
+		outlet(0,"setSelectedView", atomArrayViewID);
+//		send view data to sono area
+		outlet(0,"sendSelectedViewDataToSonoArea", atomArrayViewID);
+		
+	}
+
 	
 	public Atom [] readFromTxtFile(String filePathTxt, String viewName) throws IOException{
 		
