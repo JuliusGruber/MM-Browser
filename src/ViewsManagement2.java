@@ -1,15 +1,42 @@
 
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.apache.commons.io.FileUtils;
+
+
 
 import com.cycling74.max.Atom;
 import com.cycling74.max.MaxBox;
 import com.cycling74.max.MaxObject;
 import com.cycling74.max.MaxPatcher;
+import com.jmatio.io.MatFileReader;
+import com.jmatio.types.MLArray;
+import com.jmatio.types.MLCell;
+//import com.mathworks.toolbox.javabuilder.MWArray;
+//import com.mathworks.toolbox.javabuilder.MWClassID;
+//import com.mathworks.toolbox.javabuilder.MWException;
+//import com.mathworks.toolbox.javabuilder.MWNumericArray;
+
+//import com.mathworks.toolbox.javabuilder.*;
+
+//import doClustering.*;
+import weka.clusterers.HierarchicalClusterer;
+import weka.core.Attribute;
+import weka.core.DenseInstance;
+import weka.core.Instance;
+import weka.core.Instances;
 
 
 
@@ -21,6 +48,10 @@ public class ViewsManagement2 extends MaxObject {
 	
 	private MaxPatcher parentPatcher;
 	private MaxBox sonoAreaSend;
+	
+	private HierarchicalClusterer clusterer;
+	
+	private int curNumClusters;
 	
 	public ViewsManagement2(){
 		viewsList = 	new ArrayList<View2>();
@@ -40,7 +71,423 @@ public class ViewsManagement2 extends MaxObject {
 			viewsList.add(thisView);
 			
 		}
+		
+		
+		
+		
+		clusterer = new HierarchicalClusterer();
+		
+		 String[] options = new String[2];
+		 options[0] = "-L";
+		 options[1] = "WARD";
+		
+		
+		try {
+			clusterer.setOptions(options);
+		} catch (Exception e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
+	
+		curNumClusters = 0;
+		
+		
 	}
+	
+	
+	
+	
+	public void loadFolderFeatureData(String dirName){
+		post("loadFolderFeatureData() method was called: "+ dirName);
+		
+		File dir = new File(dirName);
+		String[] extensions = new String[] {"mat" };
+		Collection<File> matFilePathColl =   FileUtils.listFiles(dir, extensions, true);
+		System.out.println("There are "+matFilePathColl.size()+" mat files in this folder");
+		
+		
+		for(File file : matFilePathColl){
+			String filePath = null;
+				try {
+					filePath = 	file.getCanonicalPath();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			
+				String viewNameMat = file.getName().replace(".mat", "");
+//				post("viewName from mat file: "+viewNameMat);
+				
+//				check if view with name == viewName from mat file
+				if(checkViewNameMatIsInViewsList(viewNameMat)){
+//					post("viewName from mat file: "+viewNameMat+" is in views list");
+					loadViewFeatureDataFromMatFile(filePath,viewNameMat);
+				}	
+					
+				
+				
+			
+				
+				
+		}
+	}
+	
+	private void loadViewFeatureDataFromMatFile(String matFilePath, String viewNameMat){
+		for(View2 view : viewsList){
+				if(	view.getViewName().equals(viewNameMat)){
+					LinkedHashMap<String, double[]> featureData = new LinkedHashMap<String, double[]>();
+					Map<String, MLArray> content = null; 
+					MatFileReader mfr = null;;
+					try {
+						mfr = new MatFileReader(matFilePath);
+					} catch (FileNotFoundException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					content = mfr.getContent();
+//					System.out.println(content);
+					MLCell featureDataMLCell = (MLCell) content.get("featureData");
+					int numRows = featureDataMLCell.getDimensions()[0];
+					int numColumns = featureDataMLCell.getDimensions()[1];
+					int numFeatures = numColumns -1;
+					
+					
+					
+					for(int i = 0; i<numRows;i++){
+						String sampleFilePath = featureDataMLCell.get(i, 0).contentToString().substring(7).replaceAll("'", "");//filepath
+						System.out.println("sampleFilePath: "+sampleFilePath);
+						double[] featureValues = new double[numFeatures];
+						for(int k = 1; k< numColumns;k++){
+//							System.out.println("Without Substring: "+ new Double(featureDataMLCell.get(i, k).contentToString()));
+							featureValues[k-1]= new Double (featureDataMLCell.get(i, k).contentToString());
+							
+//							System.out.println("featureValues:"+ featureDataMLCell.get(i, k).contentToString());
+						}
+						
+						featureData.put(sampleFilePath, featureValues);
+						
+//						double [] storedValues = featureData.get(sampleFilePath);
+//						for(int l = 0;l < storedValues.length; l++){
+//							System.out.println("value: "+ storedValues[l]);
+////							Double test = new Double(-0.0000000000000023456789);
+////							System.out.println("test: "+test);
+//						}
+					}
+					
+					
+					
+					view.setFeatureData(featureData);
+				break;
+			}
+		}
+	}
+	
+	private boolean checkViewNameMatIsInViewsList(String viewNameMat){
+		boolean isInList = false;
+		for(View2 view : viewsList){
+			post("name check view: "+view.getViewName());
+			if(	view.getViewName().equals(viewNameMat)){
+				isInList = true;
+				break;
+			}
+		}
+		post("check if viewNameMat is in viewsList: "+isInList);
+		return isInList;
+		
+	}
+	
+	public void setNumberOfClusters(int numClusters){
+		post("setNumbersOfClusters() method was called: "+ numClusters);
+		
+		curNumClusters  = numClusters;
+		
+//		get selected view
+		for(View2 view : viewsList){
+//			post("view "+view.getViewName()+" isSelected: "+view.isSelected());
+			if(view.isSelected()){
+//				post("found the selcted view: "+ view.getViewName());
+				
+//				load the feature data
+				LinkedHashMap<String,double []> featureData = view.getFeatureData();
+				if(featureData != null){
+					LinkedHashMap<String, int[]> pathClusterNumber = calculateClusterNumbers(featureData, numClusters);
+					
+					
+					
+//					LinkedHashMap<String, int[]> pathClusterNumber = fakecalculateClusterNumbers(featureData, numClusters);
+					
+//					for (Entry<String, int[]> entry : pathClusterNumber.entrySet()) {
+//						post(entry.getKey()+": "+entry.getValue()[0]);
+//					}
+										
+					Atom [] clusterInfoAtomArray = getclusterInfoAtomArray(pathClusterNumber, numClusters);
+					sonoAreaSend.send("list", clusterInfoAtomArray);
+					break;
+				}else{
+					post(view.getViewName()+" feature data is NULL");
+				}
+			}
+		
+		}
+		
+		
+	}
+	
+	private LinkedHashMap<String, int[]> calculateClusterNumbers(LinkedHashMap<String,double []> featureData, int numClusters){
+		int numRows = featureData.size();
+		Entry<String, double[]> entryLength = featureData.entrySet().iterator().next();
+		double [] testLength = entryLength.getValue();
+		int numFeatures = testLength.length;
+		
+		
+//		System.out.println("numFeatures: " + numFeatures);
+		
+		
+		ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+		for(int i = 0; i < numFeatures; i++){
+			attributes.add(new Attribute("feature"+i));
+		}
+		
+		
+//		prepare Instances
+		Instances instances = new Instances("myInstances", attributes , numRows);
+		for (Entry<String, double[]> entry : featureData.entrySet()) {
+		 	double [] value = entry.getValue();
+		 	Instance singleInstance = new DenseInstance(numFeatures); 
+		    
+		    for(int l = 0; l< value.length; l++){
+		    	singleInstance.setValue(l, value[l]);
+		    }
+			instances.add(singleInstance);
+		}
+		
+		
+		
+//		clusterer setup
+//		HierarchicalClusterer clusterer = new HierarchicalClusterer();
+//		
+//		 String[] options = new String[2];
+//		 options[0] = "-L";
+//		 options[1] = "WARD";
+//		
+//		
+//		try {
+//			clusterer.setOptions(options);
+//		} catch (Exception e1) {
+//			// TODO Auto-generated catch block
+//			e1.printStackTrace();
+//		}
+		
+		clusterer.setNumClusters(numClusters);
+		
+		try {
+			clusterer.buildClusterer(instances);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		
+//		System.out.println("Linkage Type:" +clusterer.getLinkType());
+		
+		
+		
+//		Do the clustering
+		
+		LinkedHashMap<String, int[]> filePathsClusterNumbers = new LinkedHashMap<String, int[]>();
+	
+		
+		for (Entry<String, double[]> entry : featureData.entrySet()) {
+		    String key = entry.getKey();// = filePath
+		    double [] value = entry.getValue();
+//		    System.out.println(key);
+		    
+		   
+		    
+		    Instance singleInstance = new DenseInstance(numFeatures); 
+		    
+		    for(int l = 0; l< value.length; l++){
+		    	singleInstance.setValue(l, value[l]);
+		    }
+			
+		    int clusterNumber = 0;
+			try {
+				clusterNumber = clusterer.clusterInstance(singleInstance);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    int [] singleClusterNumberArray = new int[1];
+		    singleClusterNumberArray[0]= clusterNumber;
+		    filePathsClusterNumbers.put(key, singleClusterNumberArray);
+		}
+		
+// 		print the filePath clusterNumberPairs
+		for (Entry<String, int[]> entry : filePathsClusterNumbers.entrySet()) {
+			String filePath = entry.getKey();
+			int [] clustNumArray = entry.getValue();
+			int clustNum = clustNumArray[0];
+//			System.out.println(filePath+": "+clustNum);
+		}
+		
+		return filePathsClusterNumbers;
+	}
+	
+	
+	private LinkedHashMap<String, int[]> fakecalculateClusterNumbers(LinkedHashMap<String,double []> featureData, int numClusters){
+		LinkedHashMap<String, int[]> fileClusterNumber = new LinkedHashMap<String,int []> ();
+		
+		
+		for (Entry<String, double[]> entry : featureData.entrySet()) {
+			String filePath = entry.getKey();
+			
+			
+			int randomNum = 1;
+			if(numClusters != 0){
+				randomNum= ThreadLocalRandom.current().nextInt(1, numClusters + 1);
+			}
+//			post("Random Number: "+randomNum);
+			int [] randomNumArray = new int [1];
+			randomNumArray[0] = randomNum;
+			fileClusterNumber.put(filePath, randomNumArray);
+	
+		}
+		
+		return fileClusterNumber;
+	}
+	
+	
+//	private void calculateClusterNumbers(LinkedHashMap<String,double []> featureData, int numClusters){
+//		
+//		
+//		int numRows = featureData.size();
+//		Entry<String, double[]> entryLength = featureData.entrySet().iterator().next();
+//		double [] testLength = entryLength.getValue();
+//		int numFeatures = testLength.length;
+//		
+//		
+//		post("numFeatures: " + numFeatures);
+//		
+//		double [][] nxd = new double [numRows][numFeatures];
+//		int loopCounter = 0;
+//		
+//		for (Entry<String, double[]> entry : featureData.entrySet()) {
+//		    String key = entry.getKey();
+//		    double [] value = entry.getValue();
+////		    System.out.println(key);
+//		    
+//		    for(int l = 0; l< value.length; l++){
+//		    	nxd [loopCounter][l] = value[l];
+////		    	 System.out.println(nxd [loopCounter][l]);
+//		    }
+//		   loopCounter++;
+//		}
+//		
+//		
+//		
+//		
+//		MWNumericArray nxdMWNummeric =  new MWNumericArray(nxd, MWClassID.DOUBLE);
+//		
+//		MWNumericArray numClustersMWNummericArray =  new MWNumericArray(numClusters, MWClassID.INT64);
+//		
+//		Object[] result = null;
+//	    Class1 cluster = null;
+//
+//        try {
+//			
+//        	cluster = new Class1();
+//        	
+//        	if(cluster== null){
+//        		post("cluster is NULL");
+//        	}
+//        	
+//        	
+//			result = cluster.doClustering(1, nxdMWNummeric, numClustersMWNummericArray);
+////			result = cluster.doClustering(1, nxd, numClusters);
+//			
+//			
+//			
+//			MWClassID clsid = ((MWArray)result[0]).classID();
+//			System.out.println(clsid);
+//			
+//			int [] dim = ((MWArray)result[0]).getDimensions();
+//			System.out.println("Dimenions: "+dim[0]+" "+dim[1]);
+//			
+//			double [] values = (double[]) ((MWArray)result[0]).getData();
+////			System.out.println("value1: "+values[0]);
+//			
+//			
+//		
+//			
+//			
+//			for (int m= 0; m< values.length;m++){
+//				
+//				System.out.println("singleClusterNumber "+m+": "+values[m]);
+//			
+//			}
+//			
+//			
+//		}
+//        catch (MWException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}  
+//        finally{
+//         MWArray.disposeArray(nxd);
+//         MWArray.disposeArray(result);
+////         cluster.dispose();
+//        }
+//		
+//		
+//		
+//		
+//		
+//		
+//		
+//	}
+	
+	
+	
+	
+	
+	private Atom[] getclusterInfoAtomArray(LinkedHashMap<String,int []> pathClusterNumber, int numClusters){
+		Atom [] returnAtomArray = null;
+		
+		int numFiles = pathClusterNumber.size();
+		
+		returnAtomArray = new Atom [numFiles*2 +2];
+		String messageString = "changeClusterColor";
+		returnAtomArray[0]= Atom.newAtom(messageString);
+		returnAtomArray[1]= Atom.newAtom(numClusters);
+		
+		
+		int loopCounter = 2;
+		for (Entry<String, int[]> entry : pathClusterNumber.entrySet()) {
+			String filePath = entry.getKey();
+			String trimedFilePath = filePath.trim();
+			int clusterNum = entry.getValue()[0];
+			
+			returnAtomArray[loopCounter]= Atom.newAtom(trimedFilePath);
+			returnAtomArray[loopCounter+1]= Atom.newAtom(clusterNum);
+			loopCounter = loopCounter+2;
+		}
+		
+		post("AtomArray:");
+		
+		for(int i = 0; i< returnAtomArray.length; i = i+2){
+			post(returnAtomArray[i]+": "+returnAtomArray[i+1]);
+		}
+		
+
+		return returnAtomArray;
+	}
+	
+	
+	
+	
 	
 	private Atom [] getAtomArrayFromSamplesInBasket(){
 		Atom [] returnArray  = new Atom[inBasketLookUp.size()*2+1];
@@ -70,6 +517,8 @@ public class ViewsManagement2 extends MaxObject {
 			if(!view.isUsed()){
 //				post("not used view found: "+view.getViewName());
 				view.setUsed(true);
+				view.setViewName(viewData[1].getString());
+//				post("View Name was set to: "+viewData[1].getString());
 				ArrayList<Sample> sampleList = createSamplesArrayList(viewData);
 				view.setSampleList(sampleList);
 				view.getTitleMessageBox().send("set",new Atom []{viewData[1]});//set the view title
@@ -229,6 +678,10 @@ public class ViewsManagement2 extends MaxObject {
 	
 //		MaxBox sonoAreaSend = parentPatcher.getNamedBox("viewData_views_sonoArea");
 		sonoAreaSend.send("list", sonoAreaAtomArray);
+		
+		if(curNumClusters >= 2){
+			setNumberOfClusters(curNumClusters);
+		}
 		
 	}
 	

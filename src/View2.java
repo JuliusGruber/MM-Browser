@@ -2,6 +2,7 @@
 
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 
 import com.cycling74.max.*;
 
@@ -19,7 +20,7 @@ public class View2 extends MaxObject {
 	private MaxBox viewPanel;
 	private MaxBox titleMessageBox;
 	private ArrayList<Sample> sampleList;
-	
+	private LinkedHashMap<String,double []> featureData;
 
 
 	
@@ -58,6 +59,22 @@ public class View2 extends MaxObject {
 		jsui.send("setViewID" , new Atom[]{Atom.newAtom(viewID)});
 		
 	}
+	
+	
+	
+
+	public LinkedHashMap<String, double[]> getFeatureData() {
+		return featureData;
+	}
+
+
+
+
+	public void setFeatureData(LinkedHashMap<String, double[]> featureData) {
+		this.featureData = featureData;
+	}
+
+
 
 
 	public MaxBox getJsui() {

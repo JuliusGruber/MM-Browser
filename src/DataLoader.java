@@ -2,10 +2,12 @@
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 
@@ -14,6 +16,9 @@ import com.cycling74.max.DataTypes;
 import com.cycling74.max.MaxBox;
 import com.cycling74.max.MaxObject;
 import com.cycling74.max.MaxPatcher;
+import com.jmatio.io.MatFileReader;
+import com.jmatio.types.MLArray;
+import com.jmatio.types.MLCell;
 
 public class DataLoader extends MaxObject {
 	MaxBox myPoly;
@@ -27,6 +32,7 @@ public class DataLoader extends MaxObject {
 	public DataLoader (){
 		declareOutlets(new int[]{ DataTypes.ALL, DataTypes.ALL, DataTypes.ALL, DataTypes.ALL ,DataTypes.ALL});
 		MaxPatcher p = this.getParentPatcher();
+		
 //		MaxBox audioPbatcher = p.getNamedBox("audioBpatcherViews");
 //		MaxPatcher audioPatcher  = audioPbatcher.getSubPatcher();
 //		polyFilePathSend =  audioPatcher.getNamedBox("polyFilePathSend");
@@ -45,6 +51,7 @@ public class DataLoader extends MaxObject {
 		
 		Collection <File> filePathColl = getWAVCollection(dirName);
 		
+		
 		sendFilePathInfoToPoly(filePathColl);
 		System.out.println("Loading WAVs to poly has finished");
 		
@@ -52,10 +59,11 @@ public class DataLoader extends MaxObject {
 		System.out.println("The polyAdressLookUp List was set");
 		
 //		send View data to ViewsManagement
+		String viewName =  null;
 		Collection <File> txtPathColl =  getTxtCollection(dirName);
 		for(File file : txtPathColl){
 			String filePath = null;
-			String viewName =  null;
+			
 			Atom [] atomArray = null;
 			try {
 				filePath = file.getCanonicalPath();
@@ -74,6 +82,13 @@ public class DataLoader extends MaxObject {
 			}
 			outlet(0,"setViewData", atomArray);
 		}
+		
+		// load featureData in ViewsManagement
+		outlet(0,"loadFolderFeatureData", Atom.newAtom(dirName));
+		
+		
+
+		
 //		select the fist view
 		Atom [] atomArrayViewID = new Atom[1];
 		atomArrayViewID[0] = Atom.newAtom(0);
@@ -82,7 +97,57 @@ public class DataLoader extends MaxObject {
 		outlet(0,"sendSelectedViewDataToSonoArea", atomArrayViewID);
 		
 	}
-
+	
+//	public Atom [] readFromMatFile(String filePath, String viewName){
+//		MatFileReader mfr = null;
+//		try {
+//			mfr = new MatFileReader(filePath);
+//			
+//		} catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+//	
+//		Map<String, MLArray> content = mfr.getContent();
+////		System.out.println(content);
+//		MLCell featureData = (MLCell) content.get("featureData");
+//		int numRows = featureData.getDimensions()[0];
+//		int numColumns = featureData.getDimensions()[1];
+//		int numFeatures = numColumns -1;
+//		
+//		
+//		
+//		
+//		Atom [] returnAtomArray = new Atom[(numRows*numColumns)+2];
+//		returnAtomArray[0]= Atom.newAtom(viewName);
+//		returnAtomArray[1]= Atom.newAtom(numFeatures);
+//		
+//		int atomLoopCounter = 2;
+//		for(int i = 0; i<numRows;i++){
+//			returnAtomArray[atomLoopCounter]=Atom.newAtom(featureData.get(i, 0).contentToString());//filepath
+//			for(int k = 1; k< numColumns;k++){
+//				Double.parseDouble(featureData.get(i, k).contentToString());
+//			}
+//			atomLoopCounter = atomLoopCounter+numColumns;
+//		}
+//		
+//		
+//		System.out.println(featureData.get(0, 0).toString());
+//		System.out.println(featureData.get(0, 0).contentToString());
+//		System.out.println(featureData.get(1, 0).contentToString());
+//		System.out.println(featureData.get(0, 1).contentToString());
+//		
+//		
+//		
+//		
+//		
+//		return null;
+//		
+//	}
 	
 	public Atom [] readFromTxtFile(String filePathTxt, String viewName) throws IOException{
 		
@@ -169,6 +234,15 @@ public class DataLoader extends MaxObject {
 	private void resetBasket(){
 		outlet(5,"removeAllSamples");
 	}
+	
+//	protected Collection <File> getMATCollection(String dirName){
+//		File dir = new File(dirName);
+//		String[] extensions = new String[] {"mat" };
+//		Collection<File> files =   FileUtils.listFiles(dir, extensions, true);
+//		System.out.println("There are "+files.size()+" mat files in this folder");
+//		return files;
+//		
+//	}
 	
 	protected Collection<File> getWAVCollection(String dirName) {
 		File dir = new File(dirName);
