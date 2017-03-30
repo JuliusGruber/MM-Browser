@@ -52,6 +52,8 @@ public class ViewsManagement2 extends MaxObject {
 	private HierarchicalClusterer clusterer;
 	
 	private int curNumClusters;
+	private boolean psychoAcousticClusterMode;
+	private boolean distanceClusterMode;
 	
 	public ViewsManagement2(){
 		viewsList = 	new ArrayList<View2>();
@@ -91,6 +93,8 @@ public class ViewsManagement2 extends MaxObject {
 		
 	
 		curNumClusters = 0;
+		psychoAcousticClusterMode = true;
+		distanceClusterMode = false;
 		
 		
 	}
@@ -200,11 +204,38 @@ public class ViewsManagement2 extends MaxObject {
 		
 	}
 	
+	public void setClusterMode(int modeNumber){
+		post("setClusterMode() method was called: "+ modeNumber);
+		
+		if(modeNumber == 0){
+			psychoAcousticClusterMode = true;
+			distanceClusterMode = false;
+		}
+		
+		if(modeNumber == 1){
+			psychoAcousticClusterMode = false;
+			distanceClusterMode = true;
+		}
+		
+		if(curNumClusters >= 2){
+			if(psychoAcousticClusterMode){
+				setNumberOfClusters(curNumClusters);
+			}
+			if(distanceClusterMode){
+				setNumberOfClusters(curNumClusters);
+			}
+		}
+		
+	}
+	
 	public void setNumberOfClusters(int numClusters){
 		post("setNumbersOfClusters() method was called: "+ numClusters);
 		
 		curNumClusters  = numClusters;
 		
+		
+		if(psychoAcousticClusterMode){
+		post("distanceClusterMode: "+distanceClusterMode);
 //		get selected view
 		for(View2 view : viewsList){
 //			post("view "+view.getViewName()+" isSelected: "+view.isSelected());
@@ -232,6 +263,48 @@ public class ViewsManagement2 extends MaxObject {
 				}
 			}
 		
+			}
+		}
+		
+		
+		if(distanceClusterMode){
+			post("distanceClusterMode: "+distanceClusterMode);
+			
+			for(View2 view : viewsList){
+//				post("view "+view.getViewName()+" isSelected: "+view.isSelected());
+				if(view.isSelected()){
+//					post("found the selcted view: "+ view.getViewName());
+					
+//					load the feature data
+					LinkedHashMap<String,double []> positionData = view.getPositionData();
+					if(positionData != null){
+						
+//						print positionData
+//						for (Entry<String, double[]> entry : positionData.entrySet()) {
+//						 	String filePath = entry.getKey();
+//						 	double [] posArray = entry.getValue();
+//						 	double xPos = posArray[0];
+//						 	double yPos = posArray[1];
+//						 	post(filePath+" xPos: "+xPos+" yPosition: "+yPos);
+//						}
+						
+						
+						
+						LinkedHashMap<String, int[]> pathClusterNumber = calculateClusterNumbersDistance(positionData, numClusters);
+						
+						
+						
+
+											
+						Atom [] clusterInfoAtomArray = getclusterInfoAtomArray(pathClusterNumber, numClusters);
+						sonoAreaSend.send("list", clusterInfoAtomArray);
+						break;
+					}else{
+						post(view.getViewName()+" feature data is NULL");
+					}
+				}
+			
+				}
 		}
 		
 		
@@ -267,20 +340,7 @@ public class ViewsManagement2 extends MaxObject {
 		
 		
 		
-//		clusterer setup
-//		HierarchicalClusterer clusterer = new HierarchicalClusterer();
-//		
-//		 String[] options = new String[2];
-//		 options[0] = "-L";
-//		 options[1] = "WARD";
-//		
-//		
-//		try {
-//			clusterer.setOptions(options);
-//		} catch (Exception e1) {
-//			// TODO Auto-generated catch block
-//			e1.printStackTrace();
-//		}
+
 		
 		clusterer.setNumClusters(numClusters);
 		
@@ -326,16 +386,93 @@ public class ViewsManagement2 extends MaxObject {
 		}
 		
 // 		print the filePath clusterNumberPairs
+//		for (Entry<String, int[]> entry : filePathsClusterNumbers.entrySet()) {
+//			String filePath = entry.getKey();
+//			int [] clustNumArray = entry.getValue();
+//			int clustNum = clustNumArray[0];
+//			System.out.println(filePath+": "+clustNum);
+//		}
+//		
+		return filePathsClusterNumbers;
+	}
+	
+
+	private LinkedHashMap<String, int[]> calculateClusterNumbersDistance(LinkedHashMap<String,double []> positionData, int numClusters){
+		
+		int numRows = positionData.size();
+		
+		ArrayList<Attribute> attributes = new ArrayList<Attribute>();
+		for(int i = 0; i < 2; i++){
+			attributes.add(new Attribute("feature"+i));
+		}
+		
+//		prepare Instances
+		Instances instances = new Instances("myInstances", attributes , numRows);
+		for (Entry<String, double[]> entry : positionData.entrySet()) {
+		 	double [] value = entry.getValue();
+		 	Instance singleInstance = new DenseInstance(2); 
+		    
+		    for(int l = 0; l< value.length; l++){
+		    	singleInstance.setValue(l, value[l]);
+		    }
+			instances.add(singleInstance);
+		}
+		
+//		build clusterer
+		clusterer.setNumClusters(numClusters);
+		
+		try {
+			clusterer.buildClusterer(instances);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} 
+		
+		
+//		Do the clustering
+		
+		LinkedHashMap<String, int[]> filePathsClusterNumbers = new LinkedHashMap<String, int[]>();
+	
+		
+		for (Entry<String, double[]> entry : positionData.entrySet()) {
+		    String key = entry.getKey();// = filePath
+		    double [] value = entry.getValue();
+//		    System.out.println(key);
+		    
+		   
+		    
+		    Instance singleInstance = new DenseInstance(2); 
+		    
+		    for(int l = 0; l< value.length; l++){
+		    	singleInstance.setValue(l, value[l]);
+		    }
+			
+		    int clusterNumber = 0;
+			try {
+				clusterNumber = clusterer.clusterInstance(singleInstance);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		    int [] singleClusterNumberArray = new int[1];
+		    singleClusterNumberArray[0]= clusterNumber;
+		    filePathsClusterNumbers.put(key, singleClusterNumberArray);
+		}
+		
+		
+// 		print the filePath clusterNumberPairs
 		for (Entry<String, int[]> entry : filePathsClusterNumbers.entrySet()) {
 			String filePath = entry.getKey();
 			int [] clustNumArray = entry.getValue();
 			int clustNum = clustNumArray[0];
-//			System.out.println(filePath+": "+clustNum);
+			System.out.println(filePath+": "+clustNum);
 		}
 		
+		
+		
 		return filePathsClusterNumbers;
+		
 	}
-	
 	
 	private LinkedHashMap<String, int[]> fakecalculateClusterNumbers(LinkedHashMap<String,double []> featureData, int numClusters){
 		LinkedHashMap<String, int[]> fileClusterNumber = new LinkedHashMap<String,int []> ();
@@ -721,7 +858,7 @@ public class ViewsManagement2 extends MaxObject {
 			String fileName = sample.getFileName();
 			int polyAdress = sample.getPolyAdress();
 			double x = sample.getxPosition();
-			double y = sample.getyPostion();
+			double y = sample.getyPosition();
 			boolean isInBasket = false;
 			String shape = sample.getShape();
 			if(inBasketLookUp.containsKey(sample.getFilePath())){

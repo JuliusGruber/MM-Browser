@@ -110,9 +110,9 @@ public class Sample {
 	public void setxPosition(double xPosition2) {
 		this.xPosition = xPosition2;
 	}
-	public double getyPostion() {
-		return yPosition;
-	}
+//	public double getyPostion() {
+//		return yPosition;
+//	}
 	public void setyPostion(double yPosition) {
 		this.yPosition = yPosition;
 	}

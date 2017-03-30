@@ -61,7 +61,21 @@ public class View2 extends MaxObject {
 	}
 	
 	
-	
+	public LinkedHashMap<String, double[]> getPositionData(){
+		LinkedHashMap<String, double[]> returnPositionData =  new LinkedHashMap<String, double[]>();
+		for(Sample sample : sampleList){
+			String filePath = sample.getFilePath();
+			double xPosition = sample.getxPosition();
+			double yPosition = sample.getyPosition();
+			double[] positionArray = new double[2];
+			positionArray[0] = xPosition;
+			positionArray[1] = yPosition;
+			returnPositionData.put(filePath, positionArray);
+		}
+		
+		
+		return returnPositionData;
+	}
 
 	public LinkedHashMap<String, double[]> getFeatureData() {
 		return featureData;
