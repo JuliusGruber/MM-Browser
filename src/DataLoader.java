@@ -42,9 +42,10 @@ public class DataLoader extends MaxObject {
 		
 	}
 	
-	
-	
-	public void loadFolderData(String dirName){
+	public void loadFolderData2(String dirName){
+		System.out.println("loadFolderData2() was called");
+		
+		
 		resetViews();
 		resetSonoArea();
 		resetBasket();
@@ -58,30 +59,49 @@ public class DataLoader extends MaxObject {
 		setPolyLookUp(filePathColl);
 		System.out.println("The polyAdressLookUp List was set");
 		
-//		send View data to ViewsManagement
-		String viewName =  null;
-		Collection <File> txtPathColl =  getTxtCollection(dirName);
-		for(File file : txtPathColl){
-			String filePath = null;
+		
+		Collection <File> viewDataColl =  getViewDataCollection(dirName);
+		
+		for(File file : viewDataColl){
+//			try {
+//				post("ViewData: "+file.getCanonicalPath());
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+			
+			
+			
 			
 			Atom [] atomArray = null;
+			String filePath = null;
+			String viewName = null;
+			
 			try {
 				filePath = file.getCanonicalPath();
-				viewName = file.getName().replace(".txt", "");
-//				post("This is the view name: "+ viewName);
+				viewName = file.getName().replace(".mat", "");
+				viewName = viewName.replace("view", "");
+				post("This is the filePath: "+ filePath);
+				post("This is the viewName: "+ viewName);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
-			try {
-				atomArray = readFromTxtFile(filePath, viewName);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			
+			
+			atomArray = readViewDataFromMatFile(filePath, viewName);
+			
+			
 			outlet(0,"setViewData", atomArray);
+			
+			
+			
+			
 		}
+		
+		
+		
 		
 		// load featureData in ViewsManagement
 		outlet(0,"loadFolderFeatureData", Atom.newAtom(dirName));
@@ -96,7 +116,78 @@ public class DataLoader extends MaxObject {
 //		send view data to sono area
 		outlet(0,"sendSelectedViewDataToSonoArea", atomArrayViewID);
 		
+
+		
+		
+		
+
+		
+		
 	}
+	
+
+
+//	public void loadFolderData(String dirName){
+//		resetViews();
+//		resetSonoArea();
+//		resetBasket();
+//		
+//		Collection <File> filePathColl = getWAVCollection(dirName);
+//		
+//		
+//		sendFilePathInfoToPoly(filePathColl);
+//		System.out.println("Loading WAVs to poly has finished");
+//		
+//		setPolyLookUp(filePathColl);
+//		System.out.println("The polyAdressLookUp List was set");
+//		
+////		send View data to ViewsManagement
+//		String viewName =  null;
+//		Collection <File> txtPathColl =  getTxtCollection(dirName);
+//		for(File file : txtPathColl){
+//			String filePath = null;
+//			
+//			Atom [] atomArray = null;
+//			try {
+//				filePath = file.getCanonicalPath();
+//				viewName = file.getName().replace(".txt", "");
+////				post("This is the view name: "+ viewName);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			
+//			try {
+//				atomArray = readFromTxtFile(filePath, viewName);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			outlet(0,"setViewData", atomArray);
+//		}
+//		
+//		
+//		
+//		
+//		// load featureData in ViewsManagement
+//		outlet(0,"loadFolderFeatureData", Atom.newAtom(dirName));
+//		
+//		
+//
+//		
+////		select the fist view
+//		Atom [] atomArrayViewID = new Atom[1];
+//		atomArrayViewID[0] = Atom.newAtom(0);
+//		outlet(0,"setSelectedView", atomArrayViewID);
+////		send view data to sono area
+//		outlet(0,"sendSelectedViewDataToSonoArea", atomArrayViewID);
+//		
+//	}
+	
+	
+	
+	
+	
 	
 //	public Atom [] readFromMatFile(String filePath, String viewName){
 //		MatFileReader mfr = null;
@@ -148,6 +239,9 @@ public class DataLoader extends MaxObject {
 //		return null;
 //		
 //	}
+	
+	
+
 	
 	public Atom [] readFromTxtFile(String filePathTxt, String viewName) throws IOException{
 		
@@ -218,6 +312,65 @@ public class DataLoader extends MaxObject {
 		
 		
 	}
+	
+	protected Atom [] readViewDataFromMatFile(String filePath, String viewName){
+		
+		
+		Map<String, MLArray> content = null; 
+		MatFileReader mfr = null;
+		try {
+			mfr = new MatFileReader(filePath);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		content = mfr.getContent();
+//		System.out.println(content);
+		MLCell featureDataMLCell = (MLCell) content.get("viewData");
+		int numSamples = featureDataMLCell.getDimensions()[0];
+//		int numColumns = featureDataMLCell.getDimensions()[1];
+	
+//		post("numSamples: "+numSamples);
+//		post("numColumns: "+numColumns);
+		
+
+		 Atom [] viewAtomArray =  new Atom [4*numSamples+2];
+		 viewAtomArray[0]=Atom.newAtom("setSampleData");
+		 viewAtomArray[1]=Atom.newAtom(viewName);
+		 
+		 int atomArrayCounter = 2;
+		
+		for(int i = 0; i<numSamples;i++){
+			
+//			String sampleFilePath = featureDataMLCell.get(i, 2).contentToString();
+//			String sampleFileName = featureDataMLCell.get(i, 3).contentToString();
+			String sampleFilePath = featureDataMLCell.get(i, 2).contentToString().substring(7).replaceAll("'", "").trim();//filepath
+			String sampleFileName = featureDataMLCell.get(i, 3).contentToString().substring(7).replaceAll("'", "").trim();//fileName
+			double x = new Double (featureDataMLCell.get(i, 0).contentToString());
+			double y = new Double (featureDataMLCell.get(i, 1).contentToString());
+			
+//			System.out.println("sampleFilePath: "+sampleFilePath);
+//			System.out.println("sampleFileName: "+sampleFileName);
+//			System.out.println("sample x: "+x);
+//			System.out.println("sample y: "+y);
+			
+			viewAtomArray[atomArrayCounter] = Atom.newAtom(sampleFilePath);
+			viewAtomArray[atomArrayCounter+1] = Atom.newAtom(sampleFileName);
+			viewAtomArray[atomArrayCounter+2] = Atom.newAtom(x);
+			viewAtomArray[atomArrayCounter+3] = Atom.newAtom(y);
+			
+			atomArrayCounter = atomArrayCounter +4;
+		}
+		
+		
+		
+
+		 return viewAtomArray;
+		
+	}
 
 
 	private void resetViews(){
@@ -258,6 +411,43 @@ public class DataLoader extends MaxObject {
 		Collection<File> files =   FileUtils.listFiles(dir, extensions, true);
 		System.out.println("There are "+files.size()+" txt files in this folder");
 		return files;
+	}
+	
+	protected Collection <File> getViewDataCollection(String dirName) {
+		File dir = new File(dirName);
+		String[] extensions = new String[] { "mat" };
+		Collection<File> files =   FileUtils.listFiles(dir, extensions, true);
+//		System.out.println("There are "+files.size()+" mat files in this folder");
+		Collection <File> returnColl =  new ArrayList <File>();
+		
+//		get the mat files starting with "view": these are the viewData files
+		for(File file : files){
+			String filePath = null;
+			String fileName = null;
+			
+			try {
+				filePath = file.getCanonicalPath();
+				fileName = file.getName().replace(".mat", "");
+//				post("This is the filePath: "+ filePath);
+//				post("This is the fileName: "+ fileName);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			
+			if(fileName.startsWith("view")){
+				returnColl.add(file);
+			}
+			
+			
+		}
+		
+		
+		
+		return returnColl;
+		
+		
 	}
 	
 	private void  sendFilePathInfoToPoly(Collection <File> filePathColl) {
@@ -326,6 +516,8 @@ public class DataLoader extends MaxObject {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+//			post("setPolyLookUp :"+filePath);
 			
 			Atom filePathAtom =  Atom.newAtom(filePath);
 			

@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,16 +121,21 @@ public class ViewsManagement2 extends MaxObject {
 					e.printStackTrace();
 				}
 			
+				
+				
 				String viewNameMat = file.getName().replace(".mat", "");
 //				post("viewName from mat file: "+viewNameMat);
 				
-//				check if view with name == viewName from mat file
-				if(checkViewNameMatIsInViewsList(viewNameMat)){
-//					post("viewName from mat file: "+viewNameMat+" is in views list");
-					loadViewFeatureDataFromMatFile(filePath,viewNameMat);
-				}	
-					
 				
+				if(!viewNameMat.startsWith("view")){
+				
+	//				check if view with name == viewName from mat file
+					if(checkViewNameMatIsInViewsList(viewNameMat)){
+	//					post("viewName from mat file: "+viewNameMat+" is in views list");
+						loadViewFeatureDataFromMatFile(filePath,viewNameMat);
+					}	
+						
+				}
 				
 			
 				
@@ -142,7 +148,7 @@ public class ViewsManagement2 extends MaxObject {
 				if(	view.getViewName().equals(viewNameMat)){
 					LinkedHashMap<String, double[]> featureData = new LinkedHashMap<String, double[]>();
 					Map<String, MLArray> content = null; 
-					MatFileReader mfr = null;;
+					MatFileReader mfr = null;
 					try {
 						mfr = new MatFileReader(matFilePath);
 					} catch (FileNotFoundException e) {
@@ -655,7 +661,7 @@ public class ViewsManagement2 extends MaxObject {
 //				post("not used view found: "+view.getViewName());
 				view.setUsed(true);
 				view.setViewName(viewData[1].getString());
-//				post("View Name was set to: "+viewData[1].getString());
+				post("View Name was set to: "+viewData[1].getString());
 				ArrayList<Sample> sampleList = createSamplesArrayList(viewData);
 				view.setSampleList(sampleList);
 				view.getTitleMessageBox().send("set",new Atom []{viewData[1]});//set the view title
@@ -706,6 +712,7 @@ public class ViewsManagement2 extends MaxObject {
 		
 		//send selected Samples to all views
 		for (int i = 0; i < this.viewsList.size(); i++) {
+			post("Trying to send Select Samples to view: "+viewsList.get(i).getViewName());
 			viewsList.get(i).getJsui().send("list", filePathAndShapeArray);
 			
 		}
@@ -745,14 +752,16 @@ public class ViewsManagement2 extends MaxObject {
 		
 		ArrayList <Sample> returnList = new ArrayList<Sample>();
 		
-		for (int i = 2; i < sampleAtomArray.length; i = i+4){// starting from 2because the sampleAtomAray has the methodName + vieName as  the first two argument 
-			String filePath = sampleAtomArray[i].getString();
+		for (int i = 2; i < sampleAtomArray.length; i = i+4){// starting from 2because the sampleAtomAray has the methodName + vieName as  the first two arguments 
+			String filePath = sampleAtomArray[i].getString().trim();
 			String fileName = sampleAtomArray[i+1].getString();
 			float xPosition = sampleAtomArray[i+2].toFloat();
 			float yPosition = sampleAtomArray[i+3].toFloat();
 			
 			//post("addView x: "+xPosition);
 			//post("addView y: "+yPosition);
+			
+//			post("Used for poly lookup: "+filePath);
 			
 			//look up the polyAdress
 			Sample lookUpSample = polyAdressLookUp.get(filePath);
@@ -761,7 +770,7 @@ public class ViewsManagement2 extends MaxObject {
 				post("file not found in polyLookUp");
 			}
 			int polyAdress = lookUpSample.getPolyAdress();
-			post("polyAdress: "+polyAdress+" filePath: "+filePath);
+//			post("polyAdress: "+polyAdress+" filePath: "+filePath);
 			Sample curSample = new Sample(filePath, fileName, xPosition, yPosition, polyAdress, false, "circle");
 			
 
@@ -884,18 +893,21 @@ public class ViewsManagement2 extends MaxObject {
 			
 	}
 	
-	//called from Threader before the FE starts
+	
 	public void setPolyLookUp(Atom [] polyNoFilePath) {
 		post("setPolyLookUp() method was called");
 		
 		HashMap <String, Sample> sampleMap =  new HashMap <String, Sample>();
 		for(int i = 0; i< polyNoFilePath.length; i= i+2){
-			post("VIEWS MANAGEMENT polyNumber: "+polyNoFilePath[i]+ " filePath: "+polyNoFilePath[i+1]);
+//			post("VIEWS MANAGEMENT polyNumber: "+polyNoFilePath[i]+ " filePath: "+polyNoFilePath[i+1]);
 			int polyNumber =  polyNoFilePath[i].getInt();
 			String filePath =  polyNoFilePath[i+1].getString();
 			Sample curSample =  new Sample (polyNumber, filePath);
 			sampleMap.put(curSample.getFilePath(), curSample);
 		}
+		
+		
+		
 	
 		this.setPolyAdressLookUp(sampleMap);
 	}
@@ -938,6 +950,20 @@ public class ViewsManagement2 extends MaxObject {
 
 	public void setPolyAdressLookUp(HashMap<String, Sample> polyAdressLookUp) {
 		this.polyAdressLookUp = polyAdressLookUp;
+	}
+	
+	public void printPolyLookUp(){
+		post("printPolyLookUp() was called");
+		post("size of polyLookUp: "+polyAdressLookUp.size());
+		
+		Iterator it = polyAdressLookUp.entrySet().iterator();
+	    while (it.hasNext()) {
+	        Map.Entry pair = (Map.Entry)it.next();
+	        System.out.println("printPolyLookUp: "+pair.getKey());
+	        Sample sample =  (Sample) pair.getValue();
+	        System.out.println("polyNum: "+sample.getPolyAdress());
+	        it.remove(); // avoids a ConcurrentModificationException
+	    }
 	}
 	
 	
