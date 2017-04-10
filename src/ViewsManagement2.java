@@ -169,7 +169,7 @@ public class ViewsManagement2 extends MaxObject {
 					
 					for(int i = 0; i<numRows;i++){
 						String sampleFilePath = featureDataMLCell.get(i, 0).contentToString().substring(7).replaceAll("'", "");//filepath
-						System.out.println("sampleFilePath: "+sampleFilePath);
+//						System.out.println("sampleFilePath: "+sampleFilePath);
 						double[] featureValues = new double[numFeatures];
 						for(int k = 1; k< numColumns;k++){
 //							System.out.println("Without Substring: "+ new Double(featureDataMLCell.get(i, k).contentToString()));
@@ -713,6 +713,8 @@ public class ViewsManagement2 extends MaxObject {
 		//send selected Samples to all views
 		for (int i = 0; i < this.viewsList.size(); i++) {
 			post("Trying to send Select Samples to view: "+viewsList.get(i).getViewName());
+			
+//			send Info to views JSUI objects
 			viewsList.get(i).getJsui().send("list", filePathAndShapeArray);
 			
 		}
@@ -724,6 +726,15 @@ public class ViewsManagement2 extends MaxObject {
 			Sample curSample  =  new Sample(filePathAndShapeArray[i].getString(),filePathAndShapeArray[i+1].getString() );
 			inBasketLookUp.put(curSample.getFilePath(), curSample);
 		}
+		
+////		update the sample list of all views in the views List
+//		for (int i =1; i < filePathAndShapeArray.length;i = i+2){
+//			String sampleFilePath  = filePathAndShapeArray[i].getString();
+//			String shape = filePathAndShapeArray[i+1].getString();
+//			
+//			post("UPDATE VIEWS LIST: "+sampleFilePath);
+//			post(shape);
+//		}
 		
 	}
 	
